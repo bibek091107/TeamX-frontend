@@ -1,4 +1,4 @@
-const PRODUCTION_API_ORIGIN = "https://teamx-backend.onrender.com";
+const PRODUCTION_API_ORIGIN = "https://teamx-backend-1.onrender.com";
 const DEVELOPMENT_API_ORIGIN = "http://localhost:5000";
 
 export function getApiBaseUrl(configuredBaseUrl, isDevelopment) {
