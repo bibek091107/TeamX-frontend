@@ -13,29 +13,36 @@ const FIREBASE_AUTH_ERRORS = {
   "auth/unauthorized-domain": "This website is not authorized for Firebase sign-in. Please contact the admin.",
   "auth/weak-password": "Choose a password with at least 6 characters.",
   "auth/account-exists-with-different-credential": "An account already exists with a different sign-in method.",
+  "INVALID_LOGIN_CREDENTIALS": "Invalid email or password.",
+  "EMAIL_NOT_FOUND": "No account found. Sign up first.",
+  "INVALID_PASSWORD": "Incorrect password.",
+  "OPERATION_NOT_ALLOWED": "Email/password sign-in is not enabled for this Firebase project.",
+  "API_KEY_INVALID": "Firebase configuration is invalid. Please contact the admin.",
+  "USER_DISABLED": "This account has been disabled. Contact the admin.",
+  "TOO_MANY_ATTEMPTS_TRY_LATER": "Too many attempts. Try again later.",
 };
 
+export function getFirebaseAuthErrorCode(error) {
+  const restError = error?.response?.data?.error;
+  const candidates = [typeof restError === "object" ? restError?.message : restError,
+    error?.response?.data?.message,
+    error?.customData?._tokenResponse?.error?.message,
+    error?.code,
+    error?.message];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const known = candidate.match(/(INVALID_LOGIN_CREDENTIALS|EMAIL_NOT_FOUND|INVALID_PASSWORD|OPERATION_NOT_ALLOWED|API_KEY_INVALID|USER_DISABLED|TOO_MANY_ATTEMPTS_TRY_LATER|auth\/[a-z0-9-]+)/i);
+    if (known) return known[1].toUpperCase().startsWith("AUTH/") ? known[1].toLowerCase() : known[1].toUpperCase();
+    if (/^[A-Z][A-Z0-9_]{2,}$/.test(candidate)) return candidate;
+    if (/^auth\/[a-z0-9-]+$/i.test(candidate)) return candidate.toLowerCase();
+  }
+  return null;
+}
+
 export function getFirebaseLoginErrorMessage(error) {
-  const code = error.code || error.response?.data?.code;
+  // Axios errors from Flask are kept separate from Firebase password errors.
   if (error.response?.data?.error && error.response.status >= 400) {
     return error.response.data.error;
-  }
-
-  // Firebase Identity Toolkit REST errors may appear as HTTP 400 with a
-  // server-side message like EMAIL_NOT_FOUND or OPERATION_NOT_ALLOWED.
-  const firebaseCode = String(error.message || "").match(/(?:error|message)[^A-Z]*(INVALID_LOGIN_CREDENTIALS|EMAIL_NOT_FOUND|INVALID_PASSWORD|USER_DISABLED|OPERATION_NOT_ALLOWED|TOO_MANY_ATTEMPTS_TRY_LATER|API_KEY_INVALID)/i)?.[1];
-  const restCode = firebaseCode?.toUpperCase();
-  if (restCode) {
-    const restMessages = {
-      EMAIL_NOT_FOUND: "No account found. Sign up first.",
-      INVALID_PASSWORD: "Incorrect password.",
-      INVALID_LOGIN_CREDENTIALS: "Invalid email or password.",
-      USER_DISABLED: "This account has been disabled. Contact the admin.",
-      OPERATION_NOT_ALLOWED: "Email/password sign-in is not enabled for this Firebase project.",
-      TOO_MANY_ATTEMPTS_TRY_LATER: "Too many attempts. Try again later.",
-      API_KEY_INVALID: "Firebase configuration is invalid. Please contact the admin.",
-    };
-    return restMessages[restCode] || "Firebase sign-in failed. Check the Firebase error code in the browser console.";
   }
 
   if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
@@ -52,6 +59,8 @@ export function getFirebaseLoginErrorMessage(error) {
       "Authentication failed. Please sign in again.";
   }
 
-  return FIREBASE_AUTH_ERRORS[code] || error.message ||
-    "Authentication failed. Please try again.";
+  const code = getFirebaseAuthErrorCode(error);
+  if (code && FIREBASE_AUTH_ERRORS[code]) return FIREBASE_AUTH_ERRORS[code];
+  if (code) return `Firebase authentication failed (${code}). Please contact the admin.`;
+  return "Authentication failed. Please try again.";
 }

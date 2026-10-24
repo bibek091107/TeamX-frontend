@@ -3,7 +3,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { authApi } from "../services/api";
-import { getFirebaseLoginErrorMessage } from "../services/authErrors";
+import { getFirebaseAuthErrorCode, getFirebaseLoginErrorMessage } from "../services/authErrors";
+import { exchangeFirebaseUserForSession, signInWithEmail, signUpWithEmail } from "../services/emailAuthFlow";
 import useStore from "../store/useStore";
 import {
   auth, googleProvider, signInWithPopup,
@@ -50,34 +51,33 @@ export default function LoginPage() {
   const setField = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
   const finishLogin = async (idToken) => {
-    try {
-      const r = await authApi.firebaseLogin(idToken);
-      setToken(r.data.accessToken);
-      localStorage.setItem("atb_refresh_token", r.data.refreshToken);
-      setUser(r.data.user);
-      
-      // Use teams from the login response — don't treat failure as empty
-      const teams = r.data.teams || [];
-      setTeams(teams);
-      if (r.data.lastActiveTeamId) {
-        const target = teams.find(t => t.id === r.data.lastActiveTeamId);
-        if (target) setActiveTeam(target);
-      }
-      
-      // Always navigate to onboarding / team selection to display the 3 options
-      navigate("/onboarding");
-    } catch (err) {
-      throw new Error(getFirebaseLoginErrorMessage(err));
+    const r = await authApi.firebaseLogin(idToken);
+    setToken(r.data.accessToken);
+    localStorage.setItem("atb_refresh_token", r.data.refreshToken);
+    setUser(r.data.user);
+
+    // Login response contains the existing profile and memberships.
+    const teams = r.data.teams || [];
+    setTeams(teams);
+    if (r.data.lastActiveTeamId) {
+      const target = teams.find(t => t.id === r.data.lastActiveTeamId);
+      if (target) setActiveTeam(target);
     }
+
+    navigate("/onboarding");
   };
+
+  const finishFirebaseUserLogin = (user) => exchangeFirebaseUserForSession(
+    user,
+    (idToken) => finishLogin(idToken),
+  );
 
   const handleGoogle = async () => {
     if (!auth) { toast.error("Firebase not configured. Use email login."); return; }
     setLoading(true);
     try {
       const result  = await signInWithPopup(auth, googleProvider);
-      const idToken = await result.user.getIdToken();
-      await finishLogin(idToken);
+      await finishFirebaseUserLogin(result.user);
       toast.success("Welcome to TeamPulse! 🎉");
     } catch (e) {
       if (e.code !== "auth/popup-closed-by-user")
@@ -93,16 +93,19 @@ export default function LoginPage() {
     try {
       if (auth) {
         if (mode === "signup") {
-          const result = await createUserWithEmailAndPassword(auth, form.email, form.password);
-          await sendEmailVerification(result.user);
+          await signUpWithEmail(
+            auth, form.email, form.password,
+            createUserWithEmailAndPassword,
+            sendEmailVerification,
+          );
           setVerificationSent(true);
           setMode("login");
           toast.success("Verification email sent! Check your inbox before signing in.", { duration: 6000 });
           setLoading(false);
           return;
         } else {
-          const result = await signInWithEmailAndPassword(auth, form.email, form.password);
-          if (!result.user.emailVerified) {
+          const user = await signInWithEmail(auth, form.email, form.password, signInWithEmailAndPassword);
+          if (!user.emailVerified) {
             toast(
               (t) => (
                 <div className="flex flex-col gap-2">
@@ -110,7 +113,7 @@ export default function LoginPage() {
                   <p className="text-xs text-gray-500">Check your inbox or resend the link.</p>
                   <button
                     onClick={async () => {
-                      await sendEmailVerification(result.user);
+                      await sendEmailVerification(user);
                       toast.dismiss(t.id);
                       toast.success("Verification email resent!");
                     }}
@@ -126,8 +129,7 @@ export default function LoginPage() {
             setLoading(false);
             return;
           }
-          const idToken = await result.user.getIdToken();
-          await finishLogin(idToken);
+          await finishFirebaseUserLogin(user);
           toast.success("Welcome back! 👋");
         }
       } else {
@@ -135,6 +137,11 @@ export default function LoginPage() {
         return;
       }
     } catch (e) {
+      console.warn("Email authentication failed", {
+        stage: e.response ? "backend_token_exchange" : "firebase_email_auth",
+        code: e.response?.data?.code || getFirebaseAuthErrorCode(e) || "unknown",
+        status: e.response?.status || null,
+      });
       toast.error(getFirebaseLoginErrorMessage(e));
     } finally { setLoading(false); }
   };
