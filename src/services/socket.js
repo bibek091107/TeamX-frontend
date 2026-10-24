@@ -3,6 +3,7 @@
 // Prevents multiple sockets competing and notifications getting lost
 
 import { io } from "socket.io-client";
+import { API_ORIGIN } from "./api";
 
 let _socket = null;
 let _userId = null;
@@ -10,7 +11,7 @@ let _teamId = null;
 
 export function getAppSocket() {
   if (!_socket || _socket.disconnected) {
-    _socket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:5000", {
+    _socket = io(API_ORIGIN, {
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 10,

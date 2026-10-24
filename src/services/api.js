@@ -1,16 +1,23 @@
 // src/services/api.js
 import axios from "axios";
+import { getApiBaseUrl } from "./apiConfig";
 
-const BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+export const API_BASE_URL = getApiBaseUrl(
+  import.meta.env.VITE_API_BASE_URL,
+  import.meta.env.DEV,
+);
+export const API_ORIGIN = new URL(API_BASE_URL).origin;
 
 const api = axios.create({
-  baseURL: BASE,
+  baseURL: API_BASE_URL,
   timeout: 60000,
   headers: { "Content-Type": "application/json" },
 });
 
 api.interceptors.request.use(cfg => {
-  const token = localStorage.getItem("atb_token");
+  const token = cfg.url?.includes("/auth/refresh")
+    ? null
+    : localStorage.getItem("atb_token");
   if (token) cfg.headers.Authorization = `Bearer ${token}`;
   return cfg;
 });
@@ -54,7 +61,7 @@ api.interceptors.response.use(
     const isAuthEndpoint = url.includes("/auth/firebase-login") || url.includes("/auth/refresh");
 
     if (status !== 401 || isAuthEndpoint || !original || original._retry) {
-      if (status === 401) forceLogout();
+      if (status === 401 && !isAuthEndpoint) forceLogout();
       return Promise.reject(err);
     }
 
@@ -82,7 +89,7 @@ api.interceptors.response.use(
     try {
       // Plain axios (not the `api` instance) so the request interceptor
       // above doesn't overwrite this with the expired access token.
-      const { data } = await axios.post(`${BASE}/auth/refresh`, {}, {
+      const { data } = await api.post("/auth/refresh", {}, {
         headers: { Authorization: `Bearer ${refreshToken}` },
       });
       localStorage.setItem("atb_token", data.accessToken);
@@ -101,8 +108,7 @@ api.interceptors.response.use(
 
 // ── Auth ──────────────────────────────────────────────────────
 export const authApi = {
-  firebaseLogin:        (idToken, email, displayName, emailVerified) =>
-    api.post("/auth/firebase-login", { idToken, email, displayName, emailVerified }),
+  firebaseLogin:        (idToken) => api.post("/auth/firebase-login", { idToken }),
   getMe:                ()       => api.get("/auth/me"),
   updateProfile:        (data)   => api.put("/auth/me", data),
   getMyTeams:           ()       => api.get("/auth/teams"),

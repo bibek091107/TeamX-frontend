@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { authApi } from "../services/api";
+import { getFirebaseLoginErrorMessage } from "../services/authErrors";
 import useStore from "../store/useStore";
 import {
   auth, googleProvider, signInWithPopup,
@@ -48,9 +49,9 @@ export default function LoginPage() {
 
   const setField = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
-  const finishLogin = async (idToken, email, displayName, emailVerified = true) => {
+  const finishLogin = async (idToken) => {
     try {
-      const r = await authApi.firebaseLogin(idToken, email, displayName, emailVerified);
+      const r = await authApi.firebaseLogin(idToken);
       setToken(r.data.accessToken);
       localStorage.setItem("atb_refresh_token", r.data.refreshToken);
       setUser(r.data.user);
@@ -66,22 +67,7 @@ export default function LoginPage() {
       // Always navigate to onboarding / team selection to display the 3 options
       navigate("/onboarding");
     } catch (err) {
-      // CORS or network error — axios wraps these with code ERR_NETWORK
-      if (err.code === "ERR_NETWORK" || err.message === "Network Error") {
-        throw new Error(
-          "Cannot reach the server. This may be a network issue or a CORS configuration problem. Please try again later."
-        );
-      }
-      // Backend returned a JSON error
-      const status  = err.response?.status;
-      const errData = err.response?.data;
-      if (status === 503) {
-        throw new Error(errData?.error || "Server authentication is not configured. Please contact the admin.");
-      }
-      if (status === 401) {
-        throw new Error(errData?.error || "Authentication failed. Please sign in again.");
-      }
-      throw err;
+      throw new Error(getFirebaseLoginErrorMessage(err));
     }
   };
 
@@ -91,11 +77,11 @@ export default function LoginPage() {
     try {
       const result  = await signInWithPopup(auth, googleProvider);
       const idToken = await result.user.getIdToken();
-      await finishLogin(idToken, result.user.email, result.user.displayName, result.user.emailVerified);
+      await finishLogin(idToken);
       toast.success("Welcome to TeamPulse! 🎉");
     } catch (e) {
       if (e.code !== "auth/popup-closed-by-user")
-        toast.error(e.message || "Google sign-in failed");
+        toast.error(getFirebaseLoginErrorMessage(e));
     } finally { setLoading(false); }
   };
 
@@ -141,26 +127,15 @@ export default function LoginPage() {
             return;
           }
           const idToken = await result.user.getIdToken();
-          await finishLogin(idToken, result.user.email, result.user.displayName || form.name, result.user.emailVerified);
+          await finishLogin(idToken);
           toast.success("Welcome back! 👋");
         }
       } else {
-        const mockToken = `mock_${Date.now()}`;
-        await finishLogin(mockToken, form.email, form.name || form.email.split("@")[0]);
-        toast.success(mode === "signup" ? "Account created!" : "Signed in!");
+        toast.error("Firebase authentication is unavailable. Please try again later.");
+        return;
       }
     } catch (e) {
-      const msgs = {
-        "auth/user-not-found":          "No account found. Sign up first.",
-        "auth/wrong-password":          "Incorrect password.",
-        "auth/invalid-credential":      "Invalid email or password.",
-        "auth/email-already-in-use":    "Email already registered. Sign in.",
-        "auth/invalid-email":           "Invalid email address.",
-        "auth/too-many-requests":       "Too many attempts. Try again later.",
-        "auth/operation-not-allowed":   "Email/password sign-in is not enabled for this project. Please contact the admin.",
-        "auth/network-request-failed":  "Network error. Check your internet connection and try again.",
-      };
-      toast.error(msgs[e.code] || e.message || "Authentication failed");
+      toast.error(getFirebaseLoginErrorMessage(e));
     } finally { setLoading(false); }
   };
 
