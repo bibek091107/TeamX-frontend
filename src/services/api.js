@@ -101,8 +101,8 @@ api.interceptors.response.use(
 
 // ── Auth ──────────────────────────────────────────────────────
 export const authApi = {
-  firebaseLogin:        (idToken, email, displayName) =>
-    api.post("/auth/firebase-login", { idToken, email, displayName }),
+  firebaseLogin:        (idToken, email, displayName, emailVerified) =>
+    api.post("/auth/firebase-login", { idToken, email, displayName, emailVerified }),
   getMe:                ()       => api.get("/auth/me"),
   updateProfile:        (data)   => api.put("/auth/me", data),
   getMyTeams:           ()       => api.get("/auth/teams"),
