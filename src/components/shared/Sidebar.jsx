@@ -15,8 +15,8 @@ import {
 } from "lucide-react";
 
 const NAV = [
-  { path: "/focus",               icon: Target,          label: "Focus"          },
   { path: "/",                     icon: LayoutDashboard, label: "Dashboard"      },
+  { path: "/focus",               icon: Target,          label: "Focus"          },
   { path: "/tasks",                icon: CheckSquare,     label: "Tasks"          },
   { path: "/chat",                 icon: MessageSquare,   label: "Team Chat",     isChatRoute: true },
   { path: "/meeting-intelligence", icon: Zap,             label: "Meeting AI"     },

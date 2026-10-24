@@ -40,7 +40,7 @@ export default function AppShell() {
         {/* Main content — scrollable */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
           <Routes>
-            <Route path="/"                     element={<FocusMode />} />
+            <Route path="/"                     element={<Dashboard />} />
             <Route path="/dashboard"            element={<Dashboard />} />
             <Route path="/focus"                element={<FocusMode />} />
             <Route path="/tasks"                element={<TasksPage />} />
