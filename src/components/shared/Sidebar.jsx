@@ -11,10 +11,11 @@ import toast from "react-hot-toast";
 import {
   Activity, LayoutDashboard, CheckSquare, MessageSquare,
   BookOpen, BarChart2, Zap, ChevronDown, Plus, LogOut,
-  Moon, Sun, Users, PanelLeftClose, ChevronRight, Trash2, AlertTriangle,
+  Moon, Sun, Users, PanelLeftClose, ChevronRight, Trash2, AlertTriangle, Target,
 } from "lucide-react";
 
 const NAV = [
+  { path: "/focus",               icon: Target,          label: "Focus"          },
   { path: "/",                     icon: LayoutDashboard, label: "Dashboard"      },
   { path: "/tasks",                icon: CheckSquare,     label: "Tasks"          },
   { path: "/chat",                 icon: MessageSquare,   label: "Team Chat",     isChatRoute: true },

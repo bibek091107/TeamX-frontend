@@ -14,9 +14,11 @@ import {
 import toast from "react-hot-toast";
 
 const STATUS_COLS = [
-  { id: "pending",     label: "Pending",     color: "border-gray-300 dark:border-gray-600" },
-  { id: "in_progress", label: "In Progress", color: "border-blue-400"  },
-  { id: "completed",   label: "Completed",   color: "border-green-500" },
+  { id: "backlog",     label: "Backlog",     color: "border-gray-300 dark:border-gray-600" },
+  { id: "to_do",       label: "To Do",       color: "border-slate-400" },
+  { id: "in_progress", label: "In Progress", color: "border-blue-400" },
+  { id: "in_review",   label: "In Review",   color: "border-purple-400" },
+  { id: "done",        label: "Done",        color: "border-green-500" },
 ];
 const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 
@@ -137,20 +139,20 @@ function TaskCard({ task, onUpdate, onDelete, currentUser, isOwner }) {
 
   const isAssignee      = task.assigneeId === currentUser?.id;
   const isCreator       = task.creator?.id === currentUser?.id;
-  const canDelete       = task.status === "completed" ? isOwner : (isOwner || isCreator);
-  const canChangeStatus = isAssignee || isOwner || isCreator;
-  const isCompleted     = task.status === "completed";
+  const isCompleted     = task.status === "completed" || task.status === "done";
   const isInProgress    = task.status === "in_progress";
+  const canDelete       = isCompleted ? isOwner : (isOwner || isCreator);
+  const canChangeStatus = isAssignee || isOwner || isCreator;
 
   const handleStatusClick = () => {
     if (!canChangeStatus) { toast.error("Only the assigned person can change task status"); return; }
-    if (task.status === "pending")     setConfirmType("start");
+    if (task.status === "pending" || task.status === "backlog" || task.status === "to_do")     setConfirmType("start");
     if (task.status === "in_progress") setConfirmType("complete");
   };
 
   const handleConfirm = () => {
     if (confirmType === "start")    onUpdate(task.id, { status: "in_progress" });
-    if (confirmType === "complete") onUpdate(task.id, { status: "completed" });
+    if (confirmType === "complete") onUpdate(task.id, { status: "done" });
     setConfirmType(null);
   };
 
@@ -373,7 +375,7 @@ export default function TasksPage() {
     try {
       const r = await tasksApi.update(activeTeam.id, taskId, updates);
       updateTask(taskId, r.data.task);
-      if (updates.status === "completed")  toast.success("✅ Task completed!");
+      if (updates.status === "completed" || updates.status === "done")  toast.success("✅ Task completed!");
       else if (updates.status === "in_progress") toast.success("▶ Task started!");
     } catch (e) {
       toast.error(e.response?.data?.error || "Failed to update task");
@@ -381,7 +383,7 @@ export default function TasksPage() {
   };
 
   const handleDelete = async (task) => {
-    if (task.status === "completed" && !isOwner) {
+    if ((task.status === "completed" || task.status === "done") && !isOwner) {
       toast.error("Only the team owner can delete completed tasks");
       return;
     }
@@ -405,9 +407,9 @@ export default function TasksPage() {
   };
 
   const filtered = tasks.filter(t => {
-    if (filter === "mine")   return t.assigneeId === user?.id;
+    if (filter === "mine")   return t.assigneeId === user?.id && (t.status !== "completed" && t.status !== "done");
     if (filter === "high")   return ["high","critical"].includes(t.priority);
-    if (filter === "active") return t.status !== "completed";
+    if (filter === "active") return t.status !== "completed" && t.status !== "done";
     return true;
   });
 
@@ -418,9 +420,9 @@ export default function TasksPage() {
 
   const stats = {
     total:     tasks.length,
-    completed: tasks.filter(t => t.status === "completed").length,
-    mine:      tasks.filter(t => t.assigneeId === user?.id && t.status !== "completed").length,
-    overdue:   tasks.filter(t => t.deadline && new Date(t.deadline) < new Date() && t.status !== "completed").length,
+    completed: tasks.filter(t => t.status === "completed" || t.status === "done").length,
+    mine:      tasks.filter(t => t.assigneeId === user?.id && t.status !== "completed" && t.status !== "done").length,
+    overdue:   tasks.filter(t => t.deadline && new Date(t.deadline) < new Date() && t.status !== "completed" && t.status !== "done").length,
   };
 
   return (

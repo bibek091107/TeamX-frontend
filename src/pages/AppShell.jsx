@@ -7,6 +7,7 @@ import Sidebar from "../components/shared/Sidebar";
 import TopBar  from "../components/shared/TopBar";
 
 import Dashboard              from "./Dashboard";
+import FocusMode              from "./FocusMode";
 import TasksPage              from "./TasksPage";
 import ChatPage               from "./ChatPage";
 import KnowledgePage          from "./KnowledgePage";
@@ -39,7 +40,9 @@ export default function AppShell() {
         {/* Main content — scrollable */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
           <Routes>
-            <Route path="/"                     element={<Dashboard />} />
+            <Route path="/"                     element={<FocusMode />} />
+            <Route path="/dashboard"            element={<Dashboard />} />
+            <Route path="/focus"                element={<FocusMode />} />
             <Route path="/tasks"                element={<TasksPage />} />
             <Route path="/chat"                 element={<ChatPage />} />
             <Route path="/knowledge"            element={<KnowledgePage />} />

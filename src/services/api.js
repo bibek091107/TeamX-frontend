@@ -117,12 +117,24 @@ export const authApi = {
 // ── Tasks ─────────────────────────────────────────────────────
 export const tasksApi = {
   list:             (teamId, params) => api.get(`/tasks/teams/${teamId}/tasks`, { params }),
+  listAssignedMe:   (teamId)         => api.get(`/tasks/teams/${teamId}/tasks/assigned/me`),
+  listAssignedAll:  ()              => api.get(`/tasks/assigned/me`),
   create:           (teamId, data)   => api.post(`/tasks/teams/${teamId}/tasks`, data),
+  createFromMessage:(teamId, data)   => api.post(`/tasks/teams/${teamId}/tasks/from-message`, data),
+  get:              (teamId, id)     => api.get(`/tasks/teams/${teamId}/tasks/${id}`),
   update:           (teamId, id, d)  => api.put(`/tasks/teams/${teamId}/tasks/${id}`, d),
+  patch:            (teamId, id, d)  => api.patch(`/tasks/teams/${teamId}/tasks/${id}`, d),
+  changeStatus:     (teamId, id, status) => api.put(`/tasks/teams/${teamId}/tasks/${id}/status`, { status }),
+  updateBlocker:    (teamId, id, data)    => api.put(`/tasks/teams/${teamId}/tasks/${id}/block`, data),
   delete:           (teamId, id)     => api.delete(`/tasks/teams/${teamId}/tasks/${id}`),
+  activity:         (teamId, id)     => api.get(`/tasks/teams/${teamId}/tasks/${id}/activity`),
   stats:            (teamId)         => api.get(`/tasks/teams/${teamId}/tasks/stats`),
   getNotifications: (teamId)         => api.get(`/tasks/teams/${teamId}/notifications`),
   markRead:         (id)             => api.post(`/tasks/notifications/${id}/read`),
+  getPins:          (teamId)         => api.get(`/tasks/teams/${teamId}/pins`),
+  addPin:           (teamId, taskId) => api.post(`/tasks/teams/${teamId}/pins/${taskId}`),
+  removePin:        (teamId, taskId) => api.delete(`/tasks/teams/${teamId}/pins/${taskId}`),
+  getFocus:         (teamId)         => api.get(`/tasks/teams/${teamId}/focus`),
 };
 
 // ── Chat ──────────────────────────────────────────────────────

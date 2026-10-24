@@ -53,10 +53,21 @@ export default function LoginPage() {
     setToken(r.data.accessToken);
     localStorage.setItem("atb_refresh_token", r.data.refreshToken);
     setUser(r.data.user);
-    const teamsR = await authApi.getMyTeams();
-    setTeams(teamsR.data.teams);
-    if (teamsR.data.teams.length === 0) navigate("/onboarding");
-    else { setActiveTeam(teamsR.data.teams[0]); navigate("/"); }
+    
+    // Retrieve teams from response or refreshed getMyTeams
+    let teams = r.data.teams || [];
+    if (!teams.length) {
+      const teamsR = await authApi.getMyTeams();
+      teams = teamsR.data.teams || [];
+    }
+    setTeams(teams);
+    if (r.data.lastActiveTeamId) {
+      const target = teams.find(t => t.id === r.data.lastActiveTeamId);
+      if (target) setActiveTeam(target);
+    }
+    
+    // Always navigate to onboarding / team selection to display the 3 options
+    navigate("/onboarding");
   };
 
   const handleGoogle = async () => {
