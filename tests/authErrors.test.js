@@ -29,3 +29,14 @@ test("surfaces backend configuration errors and network failures", () => {
     /network issue or a CORS configuration problem/,
   );
 });
+
+test("maps Firebase HTTP 400 sign-in codes to actionable safe messages", () => {
+  assert.match(
+    getFirebaseLoginErrorMessage({ message: '{"error":{"message":"OPERATION_NOT_ALLOWED"}}' }),
+    /Email\/password sign-in is not enabled/,
+  );
+  assert.equal(
+    getFirebaseLoginErrorMessage({ message: '{"error":{"message":"INVALID_LOGIN_CREDENTIALS"}}' }),
+    "Invalid email or password.",
+  );
+});
