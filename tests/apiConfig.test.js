@@ -4,8 +4,8 @@ import { getApiBaseUrl } from "../src/services/apiConfig.js";
 
 test("uses the configured production API origin and adds the API prefix", () => {
   assert.equal(
-    getApiBaseUrl("https://teamx-backend-1.onrender.com", false),
-    "https://teamx-backend-1.onrender.com/api",
+    getApiBaseUrl("https://teamx-backend-1-xkxp.onrender.com", false),
+    "https://teamx-backend-1-xkxp.onrender.com/api",
   );
 });
 
@@ -20,6 +20,6 @@ test("uses localhost only as the development fallback", () => {
   assert.equal(getApiBaseUrl(undefined, true), "http://localhost:5000/api");
   assert.equal(
     getApiBaseUrl(undefined, false),
-    "https://teamx-backend-1.onrender.com/api",
+    "https://teamx-backend-1-xkxp.onrender.com/api",
   );
 });
